@@ -256,7 +256,7 @@ for g_index in range(len(myGrps)):
 	chnk = ''
 	for i in range(startCount, endCount):
 		cat = myParse[i].split()[3] 
-		if len(g.split()) <= 1:
+		if len(myGrps[g_index].split()) <= 1:
 			if cat != 'VM' and cat != 'SYM':
 				chnk = RCCGN(morph(myGrps[g_index]))[0]
 				chnk = chnk + '_0'
@@ -355,9 +355,9 @@ if edit_mode:
 startCount = 0
 endCount = 0
 row3 = []
-for g in myGrps:
+for g_index in range(len(myGrps)):
 	startCount = endCount
-	endCount = startCount + len(g.split())
+	endCount = startCount + len(myGrps[g_index].split())
 	conceptWrds = [] 
 	for i in range(startCount, endCount):
 		parseline = myParse[i].split()
@@ -477,7 +477,7 @@ for g in myGrps:
 				for m in morf[1:]:
 					gnp = m.split('<')
 					g = gnp[-3].split(':')[1][:-1]
-					n = gnp[-2].split(':')[1][:-1]
+					n = gnp[-2].split(':')[1]
 					p = gnp[-1].split(':')[1][:-1]
 					if 'cat:p>' in gnp and cat == 'PRP':
 						if n == 's>':
