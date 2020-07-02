@@ -34,20 +34,23 @@ if edit_mode:
 			('pg normal',    'white',      'black', 'standout'),
 			('pg complete',  'white',      'dark magenta'),
 			('pg smooth',     'dark magenta','black')
-			]
+		]
 
-		def __init__(self, title, OptionViewsTitles, Options, OptionsSelected):
+		def __init__(self, titleList, optionViewsTitlesList, optionsList, optionsSelectedList):
 			# These are references to the original lists and can therefore change the original lists
-			self.title = title
-			self.OptionViewsTitles = OptionViewsTitles
-			self.Options = Options
-			self.OptionsSelected = OptionsSelected
+			self.titleList = titleList
+			self.optionViewsTitlesList = optionViewsTitlesList
+			self.optionsList = optionsList
+			self.optionsSelectedList = optionsSelectedList
 			urwid.WidgetWrap.__init__(self, self.main_window())
 
 		def on_mode_button(self, button, state, button_data):
 			"""Notify the controller of a new mode setting."""
+			index = button_data[0]
+			viewIndex = button_data[1]
+			optionNum = button_data[2]
 			if state:
-				self.OptionsSelected[button_data[0]] = button_data[1]
+				self.optionsSelectedList[index][viewIndex] = optionNum
 
 		def main_shadow(self, w):
 			"""Wrap a shadow and background around widget w."""
@@ -65,54 +68,69 @@ if edit_mode:
 		def button(self, t, fn):
 			w = urwid.Button(t, fn)
 			w = urwid.AttrWrap(w, 'button normal', 'button select')
+			w = urwid.Padding(w, left=4, right=4)
 			return w
 
-		def radio_button(self, g, viewIndex, l, fn):
+		def radio_button(self, g, index, viewIndex, l, fn):
 			w = urwid.RadioButton(g, 
-				str(self.Options[viewIndex][l]),
-				l == self.OptionsSelected[viewIndex], 
+				str(self.optionsList[index][viewIndex][l]),
+				l == self.optionsSelectedList[index][viewIndex], 
 				on_state_change = fn,
-				user_data = (viewIndex, l))
+				user_data = (index, viewIndex, l))
 			w = urwid.AttrWrap(w, 'button normal', 'button select')
 			return w
 
-		def exit_program(self, w):
+		def exit_window(self, w):
 			raise urwid.ExitMainLoop()
 
-		def options_controls(self, viewIndex):
+		def skip_TUI(self, w):
+			global edit_mode
+			edit_mode = False
+			self.exit_window(w)
+
+		def options_controls(self, optionsSubsetIndex, viewIndex):
 			# setup mode radio buttons
 			self.mode_buttons = []
 			group = []
-			if self.Options[viewIndex]:
-				for m in range(len(self.Options[viewIndex])):
-					rb = self.radio_button( group, viewIndex, m, self.on_mode_button )
-					self.mode_buttons.append( rb )
+			if self.optionsList[optionsSubsetIndex][viewIndex]:
+				for m in range(len(self.optionsList[optionsSubsetIndex][viewIndex])):
+					rb = self.radio_button(group, optionsSubsetIndex, viewIndex, m, self.on_mode_button)
+					self.mode_buttons.append(rb)
 			else:
 				rb = urwid.RadioButton(group, 'No Options Available', True)
 				rb = urwid.AttrWrap(rb, 'button normal', 'button select')
-				self.mode_buttons.append( rb )
+				self.mode_buttons.append(rb)
 
-			l = [urwid.Text(self.OptionViewsTitles[viewIndex], align="center"),
+			l = [urwid.Text(self.optionViewsTitlesList[optionsSubsetIndex][viewIndex], align="center"),
 				] + self.mode_buttons
 			w = urwid.ListBox(urwid.SimpleListWalker(l))
 			return w
 
 		def main_window(self):
 			vline = urwid.AttrWrap( urwid.SolidFill(u'\u2502'), 'line')
-			OptionViewsTitlesList = [self.options_controls(0)]
-			for viewIndex in range(1, len(self.OptionViewsTitles)):
-				OptionViewsTitlesList.append(('fixed',1,vline))
-				OptionViewsTitlesList.append(self.options_controls(viewIndex))
-			w = urwid.Columns(OptionViewsTitlesList, dividechars=1, focus_column=2)
 			hline = urwid.AttrWrap( urwid.SolidFill(u'\u2500'), 'line')
-			w = urwid.Pile([
+			pile = [
 				('pack', urwid.Text("USR-CSV Creation Tool", align="center")),
-				('fixed', 1, hline),
-				('pack', urwid.Text(self.title, align="center")),
-				('fixed', 1, hline),
-				w,
-				('fixed', 1, hline),
-				('flow', self.button("Continue", self.exit_program ))])
+				('fixed', 1, hline)
+			]
+			for index in range(len(self.titleList)):
+				optionViews = [self.options_controls(index, 0)]
+				for viewIndex in range(1, len(self.optionViewsTitlesList[index])):
+					optionViews.extend([
+						('fixed', 1, vline),
+						self.options_controls(index, viewIndex)
+					])
+				pile.extend([
+					('pack', urwid.Text(self.titleList[index], align="center")),
+					('fixed', 1, hline),
+					urwid.Columns(optionViews, dividechars=1),
+					('fixed', 1, hline)
+				])
+			pile.extend([
+				('flow', self.button("Continue", self.exit_window)),
+				('flow', self.button("Skip", self.skip_TUI))
+			])
+			w = urwid.Pile(pile)
 			w = urwid.Padding(w,('fixed left',1),('fixed right',0))
 			w = urwid.AttrWrap(w,'body')
 			w = urwid.LineBox(w)
@@ -129,7 +147,6 @@ with open(input_file, 'r') as f: #Input: (लडका) (बगीचे मे�
 myfw = input_file + '_USR.csv'
 
 mySent = ''
-# TODO: Think about the input representation
 for g in filter(None, re.split('^\s*\(\s*|\s*\)\s*\(\s*|\s*\)\s*$', sent)):
 	myWrds = g.split()
 	mySent += ' ' + ' '.join(myWrds)
@@ -159,7 +176,6 @@ for g in filter(None, re.split('^\s*\(\s*|\s*\)\s*\(\s*|\s*\)\s*$', sentWX)):
 	lst = g.split()
 	for word in lst:
 		grpDict[word] = grpNum
-# print(grpDict)
 
 with open('myinp.parse.wx', 'r') as f1:
 	parse = f1.readlines()
@@ -183,10 +199,6 @@ with open('TAM-num-per-details.tsv.wx') as TAM_file:
 				if '' in tam:
 					tam.remove('')
 				tamDict[mytam] = tam 
-# print(tamDict.keys())
-# for key in tamDict.keys():
-#     print(key)
-#     print(tamDict[key])
 
 tamOptions = []
 tamOptionsSelected = [] # Selecting the largest TAM initially from multiple TAMs for the same group
@@ -211,14 +223,8 @@ for grp in myGrps:
 					print('\t', tamLst[i])
 	tamOptionsSelected.append(bestTamIndex)
 
-# print(myGrps)
-# print(tamOptions)
-# print(tamOptionsSelected)
-
 if edit_mode:
-	UsrCreationTUI('TAM Options', myGrps, tamOptions, tamOptionsSelected).main()
-
-# print(tamOptionsSelected)
+	UsrCreationTUI(['TAM Options'], [myGrps], [tamOptions], [tamOptionsSelected]).main()
 
 def getSelectedTAM(grp_index):
 	if tamOptions[grp_index]:
@@ -236,13 +242,9 @@ def morph(wrd):
 		morf = f.read().strip()[:-1].split('/')
 	return(morf)
 
-# print(morph('Upara'))
-
 def RCCGN(morf):
 	rut = morf[1].split('<')
 	return(rut)
-
-#print(RCCGN(morph('ladakiyoM')))
 
 vibList = ['awIwa', 'aMxara', 'Upara', 'kA', 'kI', 'kI ora', 'ke', 'ke awirikwa', 'ke bAxa', 'ke bAxa se', 'ke bAre meM', 'ke bAvajUxa', 'ke bIca', 'ke bIca meM', 'ke mAXyama se', 'ke lie', 'ke viroXa', 'ke viRaya meM', 'ko', 'ko CodZakara', 'cAroM ora', 'CodZakara', 'jaba waka', 'jEsA', 'waka', 'waba waka', 'waba se', 'xOrAna', 'xvArA', 'nA', 'nikata', 'nimnaliKiwa', 'nIce', 'ne', 'para', 'para vicAra', 'pare', 'pAra', 'pICe', 'bagala meM', 'baMxa', 'banAma', 'bAhara', 'binA', 'Binna', 'meM ', 'lekina', 'viparIwa', 'viroXI', 'samaya', 'sAWa', 'sAWa meM', 'sAmane', 'sivAya', 'se', 'se pahale']
 
@@ -302,8 +304,6 @@ for i in open('H_concept-to-mrs-rels.dat'):
 			cons = HinConcepts[con]
 			cons.append(i.split()[1:])
 
-#print(HinConcepts['A'])
-
 def getHinConcept(word):
 	morf = RCCGN(morph(word))
 	if morf[0] in HinConcepts.keys():
@@ -311,9 +311,6 @@ def getHinConcept(word):
 	else:
 		print('WARNING: "', word,'" not found in the Hindi concept dictionary')
 		return(word)
-
-#print(getHinConcept('A'))
-#print(getHinConcept('mEM'))
 
 all_words = []
 hinConceptOptions = []
@@ -343,14 +340,8 @@ for g in myGrps:
 				hinConceptOptions.append([[myconcept]])
 		hinConceptOptionsSelected.append(0)
 
-# print(all_words)
-# print(hinConceptOptions)
-# print(hinConceptOptionsSelected)
-
 if edit_mode:
-	UsrCreationTUI("Hindi Concept Options", all_words, hinConceptOptions, hinConceptOptionsSelected).main()
-
-# print(hinConceptOptionsSelected)
+	UsrCreationTUI(["Hindi Concept Options"], [all_words], [hinConceptOptions], [hinConceptOptionsSelected]).main()
 
 startCount = 0
 endCount = 0
@@ -364,11 +355,8 @@ for g_index in range(len(myGrps)):
 		if parseline[7] in lst: 
 			pass
 		else:
-			# print(getHinConcept(parseline[2]))
 			myconcept = hinConceptOptions[i][hinConceptOptionsSelected[i]][0]
-			# print(myconcept)
 			morf = RCCGN(morph(parseline[2]))
-			# print(parseline)
 			if morf[0] in HinConcepts.keys():
 				if parseline[3] == 'JJ': 
 					concept = myconcept + '~'
@@ -518,9 +506,12 @@ for g in myGrps:
 	# 	row6 = row6 + mygnp + ','
 
 if edit_mode:
-	UsrCreationTUI('Gender Options', myGrps, genderOptions, genderOptionsSelected).main()
-	UsrCreationTUI('Number Options', myGrps, numberOptions, numberOptionsSelected).main()
-	UsrCreationTUI('Person Options', myGrps, personOptions, personOptionsSelected).main()
+	UsrCreationTUI(
+		['Gender Options', 'Number Options', 'Person Options'],
+		[myGrps, myGrps, myGrps],
+		[genderOptions, numberOptions, personOptions],
+		[genderOptionsSelected, numberOptionsSelected, personOptionsSelected]
+	).main()
 
 for g_index in range(len(myGrps)):
 	if genderOptions[g_index]: # Empty if not a Noun or Pronoun Clause
