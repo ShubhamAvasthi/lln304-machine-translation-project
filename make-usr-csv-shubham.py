@@ -207,7 +207,6 @@ for grp in myGrps:
 	tamLst = []
 	for k in tamDict.keys():
 		for t in tamDict[k]:
-			# TODO: Understand this
 			if grp.endswith(t): # Matching TAM with input chunks
 				tamLst.append(k)
 	tamOptions.append(tamLst)
@@ -394,30 +393,47 @@ for i in range(1,len(row3)+1):
 myrow4 = ','.join(row4) + '\n'
 fwUSRcsv.write(myrow4)
 
+
+row5Options = []
+row5OptionsSelected = []
+
+grpRow5Options = ['pron', 'propn', 'def', 'mass']
+
+row5Map = {}
+for i in range(len(grpRow5Options)):
+	row5Map[grpRow5Options[i]] = i
+
 # Computing row5 info
 startCount = 0
 endCount = 0
-row5 = ''
+lst = ['JJ', 'PSP', 'VM', 'VAUX', 'SYM', '.', '?']
 for g in myGrps:
 	startCount = endCount
 	endCount = startCount + len(g.split())
-	lst = ['JJ', 'PSP', 'VM', 'VAUX', 'SYM', '.', '?']
 	r5 = ''
 	for i in range(startCount, endCount):
 		cat = myParse[i].split()[3]
 		if cat in lst: 
-			pass
+			row5Options.append([])
+			row5OptionsSelected.append(0)
 		else:
+			row5Options.append(grpRow5Options)
 			if cat == 'PRP':
-				r5 = 'pron'
+				row5OptionsSelected.append(row5Map['pron'])
 			elif cat == 'NN':
-				r5 = 'def'
+				row5OptionsSelected.append(row5Map['def'])
 			elif cat == 'NNP':
-				r5 = 'propn'
-	if r5 == '' : 
-		pass 
-	else:
-		row5 = row5 + r5 + ','
+				row5OptionsSelected.append(row5Map['propn'])
+
+if edit_mode:
+	UsrCreationTUI(['Row 5 Options'], [myGrps], [row5Options], [row5OptionsSelected]).main()
+
+row5 = ''
+for g_index in range(len(myGrps)):
+	if row5Options[g_index]:
+		row5 += row5Options[g_index][row5OptionsSelected[g_index]]
+	row5 += ','
+
 myrow5 = row5 + '\n'
 fwUSRcsv.write(myrow5)
 
@@ -521,19 +537,38 @@ for g_index in range(len(myGrps)):
 myrow6 = row6 + '\n'
 fwUSRcsv.write(myrow6)
 
+
+intraChunkRelationsOptions = []
+intraChunkRelationsOptionsSelected = []
+interChunkRelationsOptions = []
+interChunkRelationsOptionsSelected = []
+
+grpIntraChunkRelationsOptions = ['', 'viSeRaNa', 'saMKyA-viSeRaNa']
+grpInterChunkRelationsOptions = ['', 'k1', 'k2', 'k3', 'k4', 'k5', 'r6', 'k7', 'k7p']
+
+intraChunkRelationsMap = {}
+interChunkRelationsMap = {}
+for i in range(len(grpIntraChunkRelationsOptions)):
+	intraChunkRelationsMap[grpIntraChunkRelationsOptions[i]] = i
+for i in range(len(grpInterChunkRelationsOptions)):
+	interChunkRelationsMap[grpInterChunkRelationsOptions[i]] = i
+
+intraChunkInfo = []
+interChunkInfo = []
+
 # Computing row7 and row8, intra-chunk and inter-chunk relation
 startCount = 0
 endCount = 0
-row7 = []
-row8 = []
 c = 0
 lst = ['lwg__psp', 'rsym', 'lwg__vaux', 'main', 'lwg__vaux_cont']
 relMap = {'nmod__adj': 'viSeRaNa'}
 for g in myGrps:
 	startCount = endCount
 	endCount = startCount + len(g.split())
-	intra = ''
-	inter = ''
+	intra = intraChunkRelationsMap['']
+	inter = interChunkRelationsMap['']
+	intraInfo = ''
+	interInfo = ''
 	c += 1
 	for i in range(startCount, endCount):
 		rel = myParse[i].split()[6:8]
@@ -543,40 +578,86 @@ for g in myGrps:
 			pass
 		else:
 			if rel[1].startswith('k'):
-				inter = str(grpDict[lhs_wrd]) + ':' + rel[1] 
+				inter = interChunkRelationsMap[rel[1]]
+				interInfo = str(grpDict[lhs_wrd])
 			else:
 				if cat == 'QC': 
-					intra = str(c) + '.' + str(len(g.split())) + ':saMKyA-viSeRaNa'
+					intra = intraChunkRelationsMap['saMKyA-viSeRaNa']
 				else:
-					intra = str(c) + '.' + str(len(g.split())) + ':' + relMap[rel[1]]
-		if inter != '':
-			row8.append(inter)
-			row7.append(',')
-			break
-		if intra != '':
-			row7.append(intra)
+					intra = intraChunkRelationsMap['viSeRaNa']
+				intraInfo = str(c) + '.' + str(len(g.split()))
+	if intra == intraChunkRelationsMap[''] and inter == interChunkRelationsMap['']:
+		intraChunkRelationsOptions.append([])
+		interChunkRelationsOptions.append([])
+		interChunkInfo.append('')
+		intraChunkInfo.append('')
+		interChunkRelationsOptionsSelected.append(0)
+		intraChunkRelationsOptionsSelected.append(0)
+		continue
+	intraChunkRelationsOptions.append(grpIntraChunkRelationsOptions)
+	interChunkRelationsOptions.append(grpInterChunkRelationsOptions)
+	interChunkInfo.append(interInfo)
+	intraChunkInfo.append(intraInfo)
+	interChunkRelationsOptionsSelected.append(inter)
+	intraChunkRelationsOptionsSelected.append(intra)
 
-myrow7 = ''.join(row7) + '\n'
-myrow8 = ','.join(row8) + ',\n'
+if edit_mode:
+	UsrCreationTUI(
+		['Intra Chunk Relations Options', 'Inter Chunk Relations Options'],
+		[myGrps, myGrps],
+		[intraChunkRelationsOptions, interChunkRelationsOptions],
+		[intraChunkRelationsOptionsSelected, interChunkRelationsOptionsSelected]
+	).main()
+
+row7 = ''
+row8 = ''
+for g_index in range(len(myGrps)):
+	startCount = endCount
+	endCount = startCount + len(myGrps[g_index].split())
+	if not intraChunkRelationsOptions[g_index]:
+		continue
+	if intraChunkRelationsOptionsSelected[g_index] != intraChunkRelationsMap['']:
+		row7 += intraChunkInfo[g_index] + ':' + intraChunkRelationsOptions[g_index][intraChunkRelationsOptionsSelected[g_index]] + ','
+	else:
+		row7 += ','
+	if interChunkRelationsOptionsSelected[g_index] != interChunkRelationsMap['']:
+		row8 += interChunkInfo[g_index] + ':' + interChunkRelationsOptions[g_index][interChunkRelationsOptionsSelected[g_index]] + ','
+	else:
+		row8 += ','
+
+myrow7 = row7 + '\n'
+myrow8 = row8 + '\n'
 fwUSRcsv.write(myrow7)
 fwUSRcsv.write(myrow8)
 
 myrow9 = ',' * (len(myGrps)-2) + '\n'
 fwUSRcsv.write(myrow9)
 
+
+sentenceTypeOptions = [['assertive', 'negative', 'imperative', 'question']]
+sentenceTypeOptionsSelected = [0]
+
+sentenceTypeMap = {}
+for i in range(len(sentenceTypeOptions[0])):
+	sentenceTypeMap[sentenceTypeOptions[0][i]] = i
+
 # row10
-sentType = ''
 if 'rsym' in myParse[-1]:
 	if myParse[-2].split()[1] == '.' and 'nahIM' in mySent: 
-		sentType = 'negative\n'
+		sentenceTypeOptionsSelected[0] = sentenceTypeMap['negative']
 	elif '-' in myrow2 and myParse[-2].split()[1] == '.' and (myrow2.split('-')[1].startswith('o_1') or myrow2.split('-')[1].startswith('ie_1') ):
-		sentType = 'imperative\n'
+		sentenceTypeOptionsSelected[0] = sentenceTypeMap['imperative']
 	elif myParse[-2].split()[1] == '?':
-		sentType = 'question\n'
+		sentenceTypeOptionsSelected[0] = sentenceTypeMap['question']
 	else:
-		sentType = 'assertive\n'
+		sentenceTypeOptionsSelected[0] = sentenceTypeMap['assertive']
 
-fwUSRcsv.write(sentType)
+wholeSentence = mySent.strip()
+if edit_mode:
+	UsrCreationTUI(['Sentence Type Options'], [[wholeSentence]], [sentenceTypeOptions], [sentenceTypeOptionsSelected]).main()
+
+sentType = sentenceTypeOptions[0][sentenceTypeOptionsSelected[0]]
+fwUSRcsv.write(sentType + '\n')
 fwUSRcsv.close()
 
 if '-' not in myrow2:
