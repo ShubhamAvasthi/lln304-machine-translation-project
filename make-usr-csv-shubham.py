@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 # Written by Sukhada. Email: sukhada.hss@itbhu.ac.in, sukhada8@gmail.com
-#To run:  python3 make-usr-csv.py inp-utf8
+# To run:  python3 make-usr-csv.py inp-utf8
 
 import sys, os, re, argparse
 
@@ -19,21 +19,21 @@ if edit_mode:
 	class UsrCreationTUI(urwid.WidgetWrap):
 
 		palette = [
-			('body',         'black',      'light gray', 'standout'),
-			('screen edge',  'light blue', 'dark cyan'),
-			('main shadow',  'dark gray',  'black'),
-			('line',         'black',      'light gray', 'standout'),
-			('bg background','light gray', 'black'),
-			('bg 1',         'black',      'dark blue', 'standout'),
-			('bg 1 smooth',  'dark blue',  'black'),
-			('bg 2',         'black',      'dark cyan', 'standout'),
-			('bg 2 smooth',  'dark cyan',  'black'),
-			('button normal','light gray', 'dark blue', 'standout'),
-			('button select','white',      'dark green'),
-			('line',         'black',      'light gray', 'standout'),
-			('pg normal',    'white',      'black', 'standout'),
-			('pg complete',  'white',      'dark magenta'),
-			('pg smooth',     'dark magenta','black')
+			('body',         'black',        'light gray', 'standout'),
+			('screen edge',  'light blue',   'dark cyan'),
+			('main shadow',  'dark gray',    'black'),
+			('line',         'black',        'light gray', 'standout'),
+			('bg background','light gray',   'black'),
+			('bg 1',         'black',        'dark blue', 'standout'),
+			('bg 1 smooth',  'dark blue',    'black'),
+			('bg 2',         'black',        'dark cyan', 'standout'),
+			('bg 2 smooth',  'dark cyan',    'black'),
+			('button normal','light gray',   'dark blue', 'standout'),
+			('button select','white',        'dark green'),
+			('line',         'black',        'light gray', 'standout'),
+			('pg normal',    'white',        'black', 'standout'),
+			('pg complete',  'white',        'dark magenta'),
+			('pg smooth',    'dark magenta', 'black')
 		]
 
 		def __init__(self, titleList, optionViewsTitlesList, optionsList, optionsSelectedList):
@@ -410,20 +410,24 @@ lst = ['JJ', 'PSP', 'VM', 'VAUX', 'SYM', '.', '?']
 for g in myGrps:
 	startCount = endCount
 	endCount = startCount + len(g.split())
-	r5 = ''
+	row5Option = None
 	for i in range(startCount, endCount):
 		cat = myParse[i].split()[3]
-		if cat in lst: 
+		if cat in lst:
+			pass
+		else:
+			if cat == 'PRP':
+				row5Option = row5Map['pron']
+			elif cat == 'NN':
+				row5Option = row5Map['def']
+			elif cat == 'NNP':
+				row5Option = row5Map['propn']
+		if row5Option == None:
 			row5Options.append([])
 			row5OptionsSelected.append(0)
 		else:
 			row5Options.append(grpRow5Options)
-			if cat == 'PRP':
-				row5OptionsSelected.append(row5Map['pron'])
-			elif cat == 'NN':
-				row5OptionsSelected.append(row5Map['def'])
-			elif cat == 'NNP':
-				row5OptionsSelected.append(row5Map['propn'])
+			row5OptionsSelected.append(row5Option)
 
 if edit_mode:
 	UsrCreationTUI(['Row 5 Options'], [myGrps], [row5Options], [row5OptionsSelected]).main()
@@ -540,11 +544,17 @@ fwUSRcsv.write(myrow6)
 
 intraChunkRelationsOptions = []
 intraChunkRelationsOptionsSelected = []
+intraChunkHeadOptions = []
+intraChunkHeadOptionsSelected = []
+intraChunkDependentOptions = []
+intraChunkDependentOptionsSelected = []
 interChunkRelationsOptions = []
 interChunkRelationsOptionsSelected = []
+interChunkHeadOptions = []
+interChunkHeadOptionsSelected = []
 
-grpIntraChunkRelationsOptions = ['', 'viSeRaNa', 'saMKyA-viSeRaNa']
-grpInterChunkRelationsOptions = ['', 'k1', 'k2', 'k3', 'k4', 'k5', 'r6', 'k7', 'k7p']
+grpIntraChunkRelationsOptions = ['Not Applicable', 'viSeRaNa', 'viSeRya-viSeRaNa', 'saMKyA-viSeRaNa']
+grpInterChunkRelationsOptions = ['Not Applicable', 'k1', 'k2', 'k3', 'k4', 'k5', 'r6', 'k7', 'k7p']
 
 intraChunkRelationsMap = {}
 interChunkRelationsMap = {}
@@ -553,22 +563,18 @@ for i in range(len(grpIntraChunkRelationsOptions)):
 for i in range(len(grpInterChunkRelationsOptions)):
 	interChunkRelationsMap[grpInterChunkRelationsOptions[i]] = i
 
-intraChunkInfo = []
-interChunkInfo = []
-
 # Computing row7 and row8, intra-chunk and inter-chunk relation
-startCount = 0
-endCount = 0
 c = 0
 lst = ['lwg__psp', 'rsym', 'lwg__vaux', 'main', 'lwg__vaux_cont']
 relMap = {'nmod__adj': 'viSeRaNa'}
+startCount = 0
+endCount = 0
 for g in myGrps:
 	startCount = endCount
 	endCount = startCount + len(g.split())
-	intra = intraChunkRelationsMap['']
-	inter = interChunkRelationsMap['']
-	intraInfo = ''
-	interInfo = ''
+	intra = intraChunkRelationsMap['Not Applicable']
+	inter = interChunkRelationsMap['Not Applicable']
+	interHead = len(myGrps) - 2
 	c += 1
 	for i in range(startCount, endCount):
 		rel = myParse[i].split()[6:8]
@@ -579,50 +585,61 @@ for g in myGrps:
 		else:
 			if rel[1].startswith('k'):
 				inter = interChunkRelationsMap[rel[1]]
-				interInfo = str(grpDict[lhs_wrd])
+				interHead = grpDict[lhs_wrd] - 1
 			else:
 				if cat == 'QC': 
 					intra = intraChunkRelationsMap['saMKyA-viSeRaNa']
 				else:
 					intra = intraChunkRelationsMap['viSeRaNa']
-				intraInfo = str(c) + '.' + str(len(g.split()))
-	if intra == intraChunkRelationsMap[''] and inter == interChunkRelationsMap['']:
+	if intra == intraChunkRelationsMap['Not Applicable']:
 		intraChunkRelationsOptions.append([])
-		interChunkRelationsOptions.append([])
-		interChunkInfo.append('')
-		intraChunkInfo.append('')
-		interChunkRelationsOptionsSelected.append(0)
 		intraChunkRelationsOptionsSelected.append(0)
-		continue
-	intraChunkRelationsOptions.append(grpIntraChunkRelationsOptions)
-	interChunkRelationsOptions.append(grpInterChunkRelationsOptions)
-	interChunkInfo.append(interInfo)
-	intraChunkInfo.append(intraInfo)
-	interChunkRelationsOptionsSelected.append(inter)
-	intraChunkRelationsOptionsSelected.append(intra)
+		intraChunkHeadOptions.append([])
+		intraChunkHeadOptionsSelected.append(0)
+		intraChunkDependentOptions.append([])
+		intraChunkDependentOptionsSelected.append(0)
+	else:
+		intraChunkRelationsOptions.append(grpIntraChunkRelationsOptions)
+		intraChunkRelationsOptionsSelected.append(intra)
+		intraChunkHeadOptions.append(g.split())
+		intraChunkHeadOptionsSelected.append(0)
+		intraChunkDependentOptions.append(g.split())
+		intraChunkDependentOptionsSelected.append(0)
+	if inter == interChunkRelationsMap['Not Applicable']:
+		interChunkRelationsOptions.append([])
+		interChunkRelationsOptionsSelected.append(0)
+		interChunkHeadOptions.append([])
+		interChunkHeadOptionsSelected.append(0)
+	else:
+		interChunkRelationsOptions.append(grpInterChunkRelationsOptions)
+		interChunkRelationsOptionsSelected.append(inter)
+		interChunkHeadOptions.append(myGrps[:-1])
+		interChunkHeadOptionsSelected.append(interHead)
 
 if edit_mode:
 	UsrCreationTUI(
-		['Intra Chunk Relations Options', 'Inter Chunk Relations Options'],
+		['Intra Chunk Relations Options', 'Head Options', 'Dependent Options'],
+		[myGrps, myGrps, myGrps],
+		[intraChunkRelationsOptions, intraChunkHeadOptions, intraChunkDependentOptions],
+		[intraChunkRelationsOptionsSelected, intraChunkHeadOptionsSelected, intraChunkDependentOptionsSelected]
+	).main()
+	UsrCreationTUI(
+		['Inter Chunk Relations Options', 'Head Options'],
 		[myGrps, myGrps],
-		[intraChunkRelationsOptions, interChunkRelationsOptions],
-		[intraChunkRelationsOptionsSelected, interChunkRelationsOptionsSelected]
+		[interChunkRelationsOptions, interChunkHeadOptions],
+		[interChunkRelationsOptionsSelected, interChunkHeadOptionsSelected]
 	).main()
 
 row7 = ''
 row8 = ''
 for g_index in range(len(myGrps)):
-	startCount = endCount
-	endCount = startCount + len(myGrps[g_index].split())
-	if not intraChunkRelationsOptions[g_index]:
-		continue
-	if intraChunkRelationsOptionsSelected[g_index] != intraChunkRelationsMap['']:
-		row7 += intraChunkInfo[g_index] + ':' + intraChunkRelationsOptions[g_index][intraChunkRelationsOptionsSelected[g_index]] + ','
-	else:
+	if intraChunkRelationsOptionsSelected[g_index] != intraChunkRelationsMap['Not Applicable']:
+		row7 += str(g_index + 1) + '.' + str(intraChunkDependentOptionsSelected[g_index] + 1) + ':' + intraChunkRelationsOptions[g_index][intraChunkRelationsOptionsSelected[g_index]] \
+		+ '~' + str(g_index + 1) + '.' + str(intraChunkHeadOptionsSelected[g_index] + 1) + ':' + intraChunkRelationsOptions[g_index][intraChunkRelationsOptionsSelected[g_index]]
+	if interChunkRelationsOptionsSelected[g_index] != interChunkRelationsMap['Not Applicable']:
+		row8 += str(interChunkHeadOptionsSelected[g_index] + 1) + ':' + interChunkRelationsOptions[g_index][interChunkRelationsOptionsSelected[g_index]]
+	if g_index < len(myGrps) - 2:
 		row7 += ','
-	if interChunkRelationsOptionsSelected[g_index] != interChunkRelationsMap['']:
-		row8 += interChunkInfo[g_index] + ':' + interChunkRelationsOptions[g_index][interChunkRelationsOptionsSelected[g_index]] + ','
-	else:
 		row8 += ','
 
 myrow7 = row7 + '\n'
